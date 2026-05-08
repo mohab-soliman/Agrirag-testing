@@ -9,7 +9,6 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
 # ── تحميل اللوجو ─────────────────────────────────────────────────────────
-# FIX 1: مسار اللوجو بقى نسبي (logo.png في نفس الفولدر) بدل المسار اللوكال
 def get_logo_base64(path="logo.png"):
     try:
         if os.path.exists(path):
@@ -35,12 +34,25 @@ st.markdown("""
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    html, body, [data-testid="stAppViewContainer"] {
-        font-family: 'Cairo', sans-serif;
-        background-color: #f0f7f2;
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+        font-family: 'Cairo', sans-serif !important;
+        background-color: #f0f7f2 !important;
+        color: #1a1a1a !important;
     }
 
-    .stChatMessage {
+    /* ── نص الرسائل يبان ── */
+    [data-testid="stChatMessage"] p,
+    [data-testid="stChatMessage"] span,
+    [data-testid="stChatMessage"] div,
+    [data-testid="stChatMessage"] li,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span {
+        color: #1a1a1a !important;
+        font-family: 'Cairo', sans-serif !important;
+    }
+
+    /* ── شكل الرسائل ── */
+    [data-testid="stChatMessage"] {
         background-color: #ffffff !important;
         border: 1px solid #c8e0d0 !important;
         border-radius: 16px !important;
@@ -49,66 +61,100 @@ st.markdown("""
         box-shadow: 0 3px 10px rgba(0,0,0,0.06) !important;
     }
 
+    /* رسالة المستخدم */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
         background-color: #d6ede1 !important;
         border-left: 5px solid #1b4f31 !important;
     }
 
+    /* رسالة الـ assistant */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-        background-color: #ffffff !important;
+        background-color: #f8fffc !important;
         border-left: 5px solid #2b7a8a !important;
     }
 
-    .stChatInputContainer {
-        padding-bottom: 20px !important;
+    /* ── caption (citations) ── */
+    [data-testid="stCaptionContainer"] p,
+    .stCaption p {
+        color: #444444 !important;
+        font-size: 12px !important;
     }
+
+    /* ── input box ── */
     [data-testid="stChatInput"] textarea {
         border-radius: 25px !important;
         border: 2px solid #a8d0bc !important;
         font-family: 'Cairo', sans-serif !important;
         font-size: 15px !important;
-        padding: 12px 20px !important;
         background-color: #ffffff !important;
         color: #1a1a1a !important;
     }
     [data-testid="stChatInput"] textarea:focus {
         border-color: #1b4f31 !important;
         box-shadow: 0 0 0 3px rgba(27,79,49,0.1) !important;
+        outline: none !important;
     }
 
+    /* ── هيدر ── */
     .custom-header {
         background: linear-gradient(135deg, #1b4f31 0%, #2b7a8a 100%);
-        color: white;
+        color: white !important;
         padding: 24px 20px;
         border-radius: 16px;
         text-align: center;
         margin-bottom: 28px;
-        box-shadow: 0 6px 20px rgba(27, 79, 49, 0.25);
+        box-shadow: 0 6px 20px rgba(27,79,49,0.25);
     }
     .custom-header h2 {
         margin: 8px 0 4px;
         font-size: 1.8rem;
         font-weight: 700;
+        color: white !important;
         letter-spacing: 1px;
     }
     .custom-header p {
         margin: 0;
         font-size: 1rem;
-        opacity: 0.85;
+        color: rgba(255,255,255,0.85) !important;
     }
 
+    /* ── قائمة الترحيب ── */
     .welcome-list-item {
         list-style: none;
         padding: 6px 0 6px 30px;
         position: relative;
         margin-bottom: 6px;
         font-size: 15px;
-        color: #2d2d2d;
+        color: #1a1a1a !important;
     }
     .welcome-list-item::before {
         content: "🌱";
         position: absolute;
         left: 0;
+    }
+
+    /* ── citations box ── */
+    .citation-box {
+        background: #f4fbf7 !important;
+        border-left: 4px solid #1b4f31;
+        border-radius: 0 10px 10px 0;
+        padding: 10px 14px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: #333 !important;
+    }
+    .citation-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #1b4f31 !important;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+    }
+    .citation-item {
+        margin: 4px 0;
+        color: #444 !important;
+        line-height: 1.5;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -137,30 +183,52 @@ with st.chat_message("assistant"):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+# ── APA Citation (لوجيك EMIRIX المحسّن) ──────────────────────────────────
 def build_apa_citation(metadata):
-    author = metadata.get("author", "Unknown Author")
-    year = metadata.get("year", "n.d.")
-    title = metadata.get("title", "Untitled")
-    page = metadata.get("page", None)
+    author    = metadata.get("author", "")
+    year      = metadata.get("year", "")
+    title     = metadata.get("title", "")
+    publisher = metadata.get("publisher", "")
+    page      = metadata.get("page", None)
+    # بحث تلقائي في الـ metadata لو الحقول الأساسية فاضية
+    if not author or not title:
+        for key, value in metadata.items():
+            if not author and any(x in key.lower() for x in ["author", "writer"]):
+                author = str(value)
+            if not title and any(x in key.lower() for x in ["title", "name"]):
+                title = str(value)
+    author = author or "Unknown Author"
+    year   = year   or "n.d."
+    title  = title  or metadata.get("source", "Untitled")
     citation = f"{author}. ({year}). {title}."
+    if publisher:
+        citation += f" {publisher}."
     if page:
-        citation += f" p. {int(page) + 1}"
+        try:
+            citation += f" p. {int(page) + 1}"
+        except:
+            citation += f" p. {page}"
     return citation
 
+# ── RAG Chain ─────────────────────────────────────────────────────────────
 @st.cache_resource
 def build_rag_chain():
-    # FIX 2: مسار الـ VDB نسبي بيشتغل على Streamlit Cloud
     current_dir = os.path.dirname(os.path.abspath(__file__))
     vdb_path = os.path.join(current_dir, "VDB")
 
-    embedding_model = HuggingFaceEmbeddings(model_name="intfloat/multilingual-e5-large")
+    embedding_model = HuggingFaceEmbeddings(
+        model_name="intfloat/multilingual-e5-large",
+        encode_kwargs={"normalize_embeddings": True}
+    )
     vector_store = Chroma(
         persist_directory=vdb_path,
         embedding_function=embedding_model
     )
-    retriever = vector_store.as_retriever(search_type="mmr", search_kwargs={"k": 4})
+    retriever = vector_store.as_retriever(
+        search_type="mmr",
+        search_kwargs={"k": 4, "fetch_k": 20}
+    )
 
-    # FIX 3: الـ API Key بتيجي من st.secrets بس (مش هاردكودد)
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         temperature=0.2,
@@ -172,8 +240,7 @@ def build_rag_chain():
         "You are AGRIRA, a professional Agriculture Assistant. "
         "Use the retrieved context about agriculture to answer the user's question. "
         "If the answer is not in the context, say that you don't know. "
-        "\n\n"
-        "Context: {context}"
+        "\n\nContext: {context}"
     )
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
@@ -184,16 +251,24 @@ def build_rag_chain():
 
 rag_chain = build_rag_chain()
 
-# عرض تاريخ المحادثة مع الـ citations
+# ── عرض تاريخ المحادثة ────────────────────────────────────────────────────
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and message.get("citations"):
-            st.markdown("---")
-            st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
-            for citation in message["citations"]:
-                st.caption(citation)
+            items = "".join(
+                f'<div class="citation-item">📄 {c}</div>'
+                for c in message["citations"]
+            )
+            st.markdown(
+                f'<div class="citation-box">'
+                f'<div class="citation-label">📚 References</div>'
+                f'{items}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
 
+# ── الـ Query ─────────────────────────────────────────────────────────────
 query = st.chat_input("Ask about agriculture topics...")
 if query:
     with st.chat_message("user"):
@@ -204,24 +279,29 @@ if query:
         result = rag_chain.invoke({"input": query})
         answer = result["answer"]
 
-        # بناء الـ citations
-        seen_citations = set()
+        seen = set()
         citations_list = []
-        for doc in result["context"]:
+        for doc in result.get("context", []):
             citation = build_apa_citation(doc.metadata)
-            if citation not in seen_citations:
-                seen_citations.add(citation)
+            if citation not in seen:
+                seen.add(citation)
                 citations_list.append(citation)
 
         with st.chat_message("assistant"):
             st.markdown(answer)
             if citations_list:
-                st.markdown("---")
-                st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
-                for citation in citations_list:
-                    st.caption(citation)
+                items = "".join(
+                    f'<div class="citation-item">📄 {c}</div>'
+                    for c in citations_list
+                )
+                st.markdown(
+                    f'<div class="citation-box">'
+                    f'<div class="citation-label">📚 References</div>'
+                    f'{items}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
 
-    # حفظ في الـ session مع الـ citations
     st.session_state.messages.append({
         "role": "assistant",
         "content": answer,
