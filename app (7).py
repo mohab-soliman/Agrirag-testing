@@ -29,68 +29,81 @@ st.set_page_config(page_title="AGRIRA - Intelligent Agriculture RAG", page_icon=
 # ── CSS ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
 
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
-
     html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Cairo', sans-serif;
-        background-color: #f2f8f5;
+        background-color: #f0f7f2;
     }
 
     .stChatMessage {
-        background-color: #fafdfb !important;
-        border: 1px solid #e0ebe4 !important;
-        border-radius: 15px !important;
-        padding: 15px !important;
-        margin-bottom: 10px !important;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+        background-color: #ffffff !important;
+        border: 1px solid #c8e0d0 !important;
+        border-radius: 16px !important;
+        padding: 16px 20px !important;
+        margin-bottom: 12px !important;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.06) !important;
     }
 
-    [data-testid="stChatMessage"]:nth-child(even) {
-        background-color: #eef7f1 !important;
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+        background-color: #d6ede1 !important;
         border-left: 5px solid #1b4f31 !important;
+    }
+
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
+        background-color: #ffffff !important;
+        border-left: 5px solid #2b7a8a !important;
     }
 
     .stChatInputContainer {
         padding-bottom: 20px !important;
     }
-    .stChatInput input {
+    [data-testid="stChatInput"] textarea {
         border-radius: 25px !important;
-        border: 1px solid #c2d6cb !important;
+        border: 2px solid #a8d0bc !important;
+        font-family: 'Cairo', sans-serif !important;
+        font-size: 15px !important;
+        padding: 12px 20px !important;
+        background-color: #ffffff !important;
+        color: #1a1a1a !important;
     }
-
-    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-        background-color: #d4ede0 !important;
-        border-left: 5px solid #1b4f31 !important;
+    [data-testid="stChatInput"] textarea:focus {
+        border-color: #1b4f31 !important;
+        box-shadow: 0 0 0 3px rgba(27,79,49,0.1) !important;
     }
 
     .custom-header {
         background: linear-gradient(135deg, #1b4f31 0%, #2b7a8a 100%);
         color: white;
-        padding: 20px;
-        border-radius: 15px;
+        padding: 24px 20px;
+        border-radius: 16px;
         text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 12px rgba(27, 79, 49, 0.2);
+        margin-bottom: 28px;
+        box-shadow: 0 6px 20px rgba(27, 79, 49, 0.25);
     }
     .custom-header h2 {
-        margin: 0;
-        font-size: 1.5rem;
+        margin: 8px 0 4px;
+        font-size: 1.8rem;
+        font-weight: 700;
+        letter-spacing: 1px;
     }
     .custom-header p {
-        margin: 5px 0 0;
-        font-size: 0.9rem;
-        opacity: 0.9;
+        margin: 0;
+        font-size: 1rem;
+        opacity: 0.85;
     }
 
     .welcome-list-item {
         list-style: none;
-        padding-left: 25px;
+        padding: 6px 0 6px 30px;
         position: relative;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
+        font-size: 15px;
+        color: #2d2d2d;
     }
     .welcome-list-item::before {
         content: "🌱";
@@ -153,7 +166,6 @@ def build_rag_chain():
         temperature=0.2,
         google_api_key=st.secrets["GOOGLE_API_KEY"],
         convert_system_message_to_human=True
-
     )
 
     system_prompt = (
@@ -172,10 +184,15 @@ def build_rag_chain():
 
 rag_chain = build_rag_chain()
 
-# عرض تاريخ المحادثة
+# عرض تاريخ المحادثة مع الـ citations
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
+        if message["role"] == "assistant" and message.get("citations"):
+            st.markdown("---")
+            st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
+            for citation in message["citations"]:
+                st.caption(citation)
 
 query = st.chat_input("Ask about agriculture topics...")
 if query:
@@ -183,21 +200,30 @@ if query:
         st.markdown(query)
     st.session_state.messages.append({"role": "user", "content": query})
 
-    # FIX 4: الـ chat_message جوا الـ spinner عشان الـ citations تظهر
     with st.spinner("AGRIRA is thinking..."):
         result = rag_chain.invoke({"input": query})
         answer = result["answer"]
 
+        # بناء الـ citations
+        seen_citations = set()
+        citations_list = []
+        for doc in result["context"]:
+            citation = build_apa_citation(doc.metadata)
+            if citation not in seen_citations:
+                seen_citations.add(citation)
+                citations_list.append(citation)
+
         with st.chat_message("assistant"):
             st.markdown(answer)
-            st.markdown("---")
-            st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
-            seen_citations = set()
-            for doc in result["context"]:
-                citation = build_apa_citation(doc.metadata)
-                if citation not in seen_citations:
-                    seen_citations.add(citation)
+            if citations_list:
+                st.markdown("---")
+                st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
+                for citation in citations_list:
                     st.caption(citation)
 
-    # FIX 5: الـ append بعد العرض عشان مش يتكرر في الـ history
-    st.session_state.messages.append({"role": "assistant", "content": answer})
+    # حفظ في الـ session مع الـ citations
+    st.session_state.messages.append({
+        "role": "assistant",
+        "content": answer,
+        "citations": citations_list
+    })
