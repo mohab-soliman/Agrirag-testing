@@ -152,6 +152,8 @@ def build_rag_chain():
         model="gemini-2.5-flash",
         temperature=0.2,
         google_api_key=st.secrets["GOOGLE_API_KEY"]
+        convert_system_message_to_human=True
+
     )
 
     system_prompt = (
