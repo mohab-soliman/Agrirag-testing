@@ -119,8 +119,7 @@ def build_apa_citation(metadata):
         author = "Unknown Author"
     if not title:
 filename = os.path.basename(source)
-    title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")
-    
+    title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")    
     citation = f"{author}. ({year}). {title}."
     if page is not None:
         try:
