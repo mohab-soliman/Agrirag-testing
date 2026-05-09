@@ -9,3 +9,4 @@ langchain-chroma
 chromadb
 sentence-transformers
 protobuf
+torchvision
