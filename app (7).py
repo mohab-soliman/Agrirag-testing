@@ -179,6 +179,8 @@ if query:
 
     with st.spinner("AGRIRA is thinking..."):
         result = rag_chain.invoke({"input": query})
+        st.write("Context docs:", len(result.get("context", [])))
+        st.write("First doc:", result.get("context", [{}])[0].metadata if result.get("context") else "EMPTY")
         answer = result["answer"]
 
         seen = set()
