@@ -115,11 +115,14 @@ def build_apa_citation(metadata):
         year = year[:4]
     else:
         year = "n.d."
+
     if not author:
         author = "Unknown Author"
+
     if not title:
-filename = os.path.basename(source)
-    title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")    
+        filename = os.path.basename(source)
+        title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")
+
     citation = f"{author}. ({year}). {title}."
     if page is not None:
         try:
@@ -151,20 +154,17 @@ def build_rag_chain():
         google_api_key=st.secrets["GOOGLE_API_KEY"],
         convert_system_message_to_human=True
     )
-
-    # prompt كـ human message بس عشان Gemini مش بيدعم system message
     system_prompt = (
-    "You are AGRIRA, a professional Agriculture Assistant. "
-    "Use the following retrieved documents to answer the user's question. "
-    "Answer directly and helpfully based on the context. "
-    "Do not say you don't know if the context contains relevant information. "
-    "\n\nContext: {context}"
+        "You are AGRIRA, a professional Agriculture Assistant. "
+        "Use the following retrieved documents to answer the user's question. "
+        "Answer directly and helpfully based on the context. "
+        "Do not say you don't know if the context contains relevant information. "
+        "\n\nContext: {context}"
     )
     prompt = ChatPromptTemplate.from_messages([
-    ("system", system_prompt),
-    ("human", "{input}"),
+        ("system", system_prompt),
+        ("human", "{input}"),
     ])
-
     combine_docs_chain = create_stuff_documents_chain(llm, prompt)
     return create_retrieval_chain(retriever, combine_docs_chain)
 
