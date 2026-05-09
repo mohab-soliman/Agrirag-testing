@@ -145,14 +145,15 @@ def build_rag_chain():
 
     # prompt كـ human message بس عشان Gemini مش بيدعم system message
     system_prompt = (
-        "You are AGRIRA, a professional Agriculture Assistant. "
-        "Use the following retrieved documents to answer the user's question. "
-        "Answer directly and helpfully. "
-        "If the information is not in the documents, say you don't know. "
-        "\n\nDocuments:\n{context}"
+    "You are AGRIRA, a professional Agriculture Assistant. "
+    "Use the following retrieved documents to answer the user's question. "
+    "Answer directly and helpfully based on the context. "
+    "Do not say you don't know if the context contains relevant information. "
+    "\n\nContext: {context}"
     )
     prompt = ChatPromptTemplate.from_messages([
-        ("human", system_prompt + "\n\nQuestion: {input}"),
+    ("system", system_prompt),
+    ("human", "{input}"),
     ])
 
     combine_docs_chain = create_stuff_documents_chain(llm, prompt)
@@ -179,8 +180,6 @@ if query:
 
     with st.spinner("AGRIRA is thinking..."):
         result = rag_chain.invoke({"input": query})
-        st.write("Context docs:", len(result.get("context", [])))
-        st.write("First doc:", result.get("context", [{}])[0].metadata if result.get("context") else "EMPTY")
         answer = result["answer"]
 
         seen = set()
