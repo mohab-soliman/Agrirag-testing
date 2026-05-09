@@ -118,7 +118,7 @@ def build_apa_citation(metadata):
     if not author:
         author = "Unknown Author"
     if not title:
-    filename = os.path.basename(source)
+filename = os.path.basename(source)
     title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")
     
     citation = f"{author}. ({year}). {title}."
