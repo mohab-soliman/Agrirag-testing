@@ -8,7 +8,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# ── تحميل اللوجو ─────────────────────────────────────────────────────────
+# ── تحميل اللوجو (مسار نسبي للـ cloud) ──────────────────────────────────
 def get_logo_base64(path="logo.png"):
     try:
         if os.path.exists(path):
@@ -28,129 +28,64 @@ st.set_page_config(page_title="AGRIRA - Intelligent Agriculture RAG", page_icon=
 # ── CSS ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
 
-#MainMenu, footer, header { visibility: hidden; }
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
 
-html, body, .stApp, [data-testid="stAppViewContainer"] {
-    font-family: 'Cairo', sans-serif !important;
-    background-color: #f0f7f2 !important;
-}
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Cairo', sans-serif;
+        background-color: #f2f8f5;
+    }
 
-/* ── كل النصوص جوا الرسائل تبان ── */
-[data-testid="stChatMessage"],
-[data-testid="stChatMessage"] *,
-[data-testid="stMarkdownContainer"],
-[data-testid="stMarkdownContainer"] * {
-    color: #1a1a1a !important;
-    font-family: 'Cairo', sans-serif !important;
-}
+    .stChatMessage {
+        background-color: #fafdfb !important;
+        border: 1px solid #e0ebe4 !important;
+        border-radius: 15px !important;
+        padding: 15px !important;
+        margin-bottom: 10px !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+    }
 
-/* ── شكل الرسائل ── */
-[data-testid="stChatMessage"] {
-    background-color: #ffffff !important;
-    border: 1px solid #c8e0d0 !important;
-    border-radius: 16px !important;
-    padding: 16px 20px !important;
-    margin-bottom: 12px !important;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.06) !important;
-}
+    [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
+        background-color: #d4ede0 !important;
+        border-left: 5px solid #1b4f31 !important;
+    }
 
-/* رسالة المستخدم */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {
-    background-color: #d6ede1 !important;
-    border-left: 5px solid #1b4f31 !important;
-}
+    .stChatInputContainer {
+        padding-bottom: 20px !important;
+    }
 
-/* رسالة الـ assistant */
-[data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarAssistant"]) {
-    background-color: #f8fffc !important;
-    border-left: 5px solid #2b7a8a !important;
-}
+    .custom-header {
+        background: linear-gradient(135deg, #1b4f31 0%, #2b7a8a 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 12px rgba(27, 79, 49, 0.2);
+    }
+    .custom-header h2 { margin: 0; font-size: 1.5rem; }
+    .custom-header p  { margin: 5px 0 0; font-size: 0.9rem; opacity: 0.9; }
 
-/* ── input ── */
-[data-testid="stChatInput"] textarea {
-    border-radius: 25px !important;
-    border: 2px solid #a8d0bc !important;
-    font-family: 'Cairo', sans-serif !important;
-    font-size: 15px !important;
-    background-color: #ffffff !important;
-    color: #1a1a1a !important;
-}
-[data-testid="stChatInput"] textarea:focus {
-    border-color: #1b4f31 !important;
-    box-shadow: 0 0 0 3px rgba(27,79,49,0.1) !important;
-}
-
-/* ── هيدر ── */
-.custom-header {
-    background: linear-gradient(135deg, #1b4f31 0%, #2b7a8a 100%);
-    padding: 24px 20px;
-    border-radius: 16px;
-    text-align: center;
-    margin-bottom: 28px;
-    box-shadow: 0 6px 20px rgba(27,79,49,0.25);
-}
-.custom-header h2 {
-    margin: 8px 0 4px;
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: white !important;
-    letter-spacing: 1px;
-}
-.custom-header p {
-    margin: 0;
-    font-size: 1rem;
-    color: rgba(255,255,255,0.85) !important;
-}
-
-/* ── قائمة الترحيب ── */
-.welcome-list-item {
-    list-style: none;
-    padding: 6px 0 6px 30px;
-    position: relative;
-    margin-bottom: 6px;
-    font-size: 15px;
-    color: #1a1a1a !important;
-}
-.welcome-list-item::before {
-    content: "🌱";
-    position: absolute;
-    left: 0;
-}
-
-/* ── citation box ── */
-.citation-box {
-    background: #f4fbf7 !important;
-    border-left: 4px solid #1b4f31;
-    border-radius: 0 10px 10px 0;
-    padding: 10px 14px;
-    margin-top: 8px;
-    font-size: 12px;
-}
-.citation-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: #1b4f31 !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-bottom: 6px;
-}
-.citation-item {
-    margin: 4px 0;
-    color: #444 !important;
-    line-height: 1.5;
-}
+    .welcome-list-item {
+        list-style: none;
+        padding-left: 25px;
+        position: relative;
+        margin-bottom: 10px;
+    }
+    .welcome-list-item::before { content: "🌱"; position: absolute; left: 0; }
 </style>
 """, unsafe_allow_html=True)
 
 # ── الهيدر ────────────────────────────────────────────────────────────────
 st.markdown(f"""
-<div class="custom-header">
-    {logo_html}
-    <h2>AGRIRA</h2>
-    <p>Intelligent Agriculture RAG 🌿</p>
-</div>
+    <div class="custom-header">
+        {logo_html}
+        <h2>AGRIRA</h2>
+        <p>Intelligent Agriculture RAG 🌿</p>
+    </div>
 """, unsafe_allow_html=True)
 
 # ── رسالة الترحيب ─────────────────────────────────────────────────────────
@@ -168,7 +103,7 @@ with st.chat_message("assistant"):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ── APA Citation من الـ source (PyPDFLoader) ──────────────────────────────
+# ── Citation من الـ source (PyPDFLoader بيحط اسم الفايل بس) ──────────────
 def build_apa_citation(metadata):
     source = metadata.get("source", "")
     page   = metadata.get("page", None)
@@ -192,8 +127,7 @@ def build_rag_chain():
     vdb_path = os.path.join(current_dir, "VDB")
 
     embedding_model = HuggingFaceEmbeddings(
-        model_name="intfloat/multilingual-e5-large",
-        encode_kwargs={"normalize_embeddings": True}
+        model_name="intfloat/multilingual-e5-large"
     )
     vector_store = Chroma(
         persist_directory=vdb_path,
@@ -201,7 +135,7 @@ def build_rag_chain():
     )
     retriever = vector_store.as_retriever(
         search_type="mmr",
-        search_kwargs={"k": 4, "fetch_k": 20}
+        search_kwargs={"k": 4}
     )
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
@@ -229,16 +163,10 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
         if message["role"] == "assistant" and message.get("citations"):
-            items = "".join(
-                f'<div class="citation-item">📄 {c}</div>'
-                for c in message["citations"]
-            )
-            st.markdown(
-                f'<div class="citation-box">'
-                f'<div class="citation-label">📚 References</div>'
-                f'{items}</div>',
-                unsafe_allow_html=True
-            )
+            st.markdown("---")
+            st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
+            for c in message["citations"]:
+                st.caption(c)
 
 # ── الـ Query ─────────────────────────────────────────────────────────────
 query = st.chat_input("Ask about agriculture topics...")
@@ -262,16 +190,10 @@ if query:
         with st.chat_message("assistant"):
             st.markdown(answer)
             if citations_list:
-                items = "".join(
-                    f'<div class="citation-item">📄 {c}</div>'
-                    for c in citations_list
-                )
-                st.markdown(
-                    f'<div class="citation-box">'
-                    f'<div class="citation-label">📚 References</div>'
-                    f'{items}</div>',
-                    unsafe_allow_html=True
-                )
+                st.markdown("---")
+                st.markdown("<small>📚 <b>References</b></small>", unsafe_allow_html=True)
+                for c in citations_list:
+                    st.caption(c)
 
     st.session_state.messages.append({
         "role": "assistant",
