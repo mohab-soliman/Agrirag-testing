@@ -8,7 +8,7 @@ from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate
 
-# ── تحميل اللوجو (مسار نسبي للـ cloud) ──────────────────────────────────
+# ── تحميل اللوجو ─────────────────────────────────────────────────────────
 def get_logo_base64(path="logo.png"):
     try:
         if os.path.exists(path):
@@ -103,7 +103,7 @@ with st.chat_message("assistant"):
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ── Citation من الـ source (PyPDFLoader بيحط اسم الفايل بس) ──────────────
+# ── Citation ─────────────────────────────────────────────────────────────
 def build_apa_citation(metadata):
     source = metadata.get("source", "")
     page   = metadata.get("page", None)
@@ -140,19 +140,21 @@ def build_rag_chain():
     llm = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash",
         temperature=0.2,
-        google_api_key=st.secrets["GOOGLE_API_KEY"],
-        convert_system_message_to_human=True
+        google_api_key=st.secrets["GOOGLE_API_KEY"]
     )
+
+    # prompt كـ human message بس عشان Gemini مش بيدعم system message
     system_prompt = (
         "You are AGRIRA, a professional Agriculture Assistant. "
-        "Use the retrieved context about agriculture to answer the user's question. "
-        "If the answer is not in the context, say that you don't know. "
-        "\n\nContext: {context}"
+        "Use the following retrieved documents to answer the user's question. "
+        "Answer directly and helpfully. "
+        "If the information is not in the documents, say you don't know. "
+        "\n\nDocuments:\n{context}"
     )
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_prompt),
-        ("human", "{input}"),
+        ("human", system_prompt + "\n\nQuestion: {input}"),
     ])
+
     combine_docs_chain = create_stuff_documents_chain(llm, prompt)
     return create_retrieval_chain(retriever, combine_docs_chain)
 
