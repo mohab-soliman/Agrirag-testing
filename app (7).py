@@ -105,14 +105,22 @@ if "messages" not in st.session_state:
 
 # ── Citation ─────────────────────────────────────────────────────────────
 def build_apa_citation(metadata):
-    source = metadata.get("source", "")
+    author = metadata.get("author", "")
+    title  = metadata.get("title", "")
+    year   = metadata.get("creationdate", "")
     page   = metadata.get("page", None)
-    if source:
-        filename = os.path.basename(source)
-        title = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ")
+    source = metadata.get("source", "")
+
+    if year and len(year) >= 4:
+        year = year[:4]
     else:
-        title = "Unknown Source"
-    citation = f"{title}."
+        year = "n.d."
+    if not author:
+        author = "Unknown Author"
+    if not title:
+        title = os.path.splitext(os.path.basename(source))[0]
+
+    citation = f"{author}. ({year}). {title}."
     if page is not None:
         try:
             citation += f" p. {int(page) + 1}"
